@@ -73,12 +73,40 @@ public class TourGuideService {
 	}
 
 	public List<Provider> getTripDeals(User user) {
-		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
-		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
-				user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
-				user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
+		// Ensure user has at least one visited location
+		if (user.getVisitedLocations().isEmpty()) {
+			trackUserLocation(user);
+		}
+		// get the sum of all points
+		int cumulativeRewardPoints = user.getUserRewards().stream()
+				                          .mapToInt(UserReward::getRewardPoints)
+				                          .sum();
+
+		// get all the providers for each attraction
+		List<Provider> allProviders = getProvidersPerAttraction(user, cumulativeRewardPoints);
+		// limit results to 10 each time
+		List<Provider> providers = allProviders.stream()
+						.limit(10)
+						.toList();
+
 		user.setTripDeals(providers);
 		return providers;
+	}
+
+	private List<Provider> getProvidersPerAttraction(User user, int cumulativeRewardPoints) {
+		List<Provider> allProviders = new ArrayList<>();
+		List<Attraction> attractions = gpsUtil.getAttractions();
+		attractions.forEach(attraction -> {
+			List<Provider> result = tripPricer.getPrice(
+					tripPricerApiKey,
+					attraction.attractionId,
+					user.getUserPreferences().getNumberOfAdults(),
+					user.getUserPreferences().getNumberOfChildren(),
+					user.getUserPreferences().getTripDuration(),
+					cumulativeRewardPoints);
+			allProviders.addAll(result);
+		});
+		return allProviders;
 	}
 
 	public VisitedLocation trackUserLocation(User user) {
