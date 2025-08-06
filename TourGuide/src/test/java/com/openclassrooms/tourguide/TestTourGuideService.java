@@ -121,6 +121,11 @@ public class TestTourGuideService {
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
 		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+		UserPreferences userPreferences = new UserPreferences();
+		userPreferences.setNumberOfChildren(2);
+		userPreferences.setNumberOfAdults(2);
+		userPreferences.setTripDuration(7);
+		user.setUserPreferences(userPreferences);
 
 		List<Provider> providers = tourGuideService.getTripDeals(user);
 
