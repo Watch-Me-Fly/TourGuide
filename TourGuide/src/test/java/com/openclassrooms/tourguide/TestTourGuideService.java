@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.UUID;
 
+import com.openclassrooms.tourguide.user.UserPreferences;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -111,7 +112,7 @@ public class TestTourGuideService {
 		assertEquals(5, attractions.size());
 	}
 
-	@Disabled
+	@DisplayName("Get trip deals")
 	@Test
 	public void getTripDeals() {
 		GpsUtil gpsUtil = new GpsUtil();
