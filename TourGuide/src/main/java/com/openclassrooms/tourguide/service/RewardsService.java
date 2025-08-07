@@ -1,6 +1,6 @@
 package com.openclassrooms.tourguide.service;
 
-import java.util.List;
+import java.util.*;
 
 import org.springframework.stereotype.Service;
 
@@ -35,17 +35,23 @@ public class RewardsService {
 	public void setDefaultProximityBuffer() {
 		proximityBuffer = defaultProximityBuffer;
 	}
+	public long getProximityBuffer() {return proximityBuffer;}
 	
 	public void calculateRewards(User user) {
-		List<VisitedLocation> userLocations = user.getVisitedLocations();
-		List<Attraction> attractions = gpsUtil.getAttractions();
-		
-		for(VisitedLocation visitedLocation : userLocations) {
-			for(Attraction attraction : attractions) {
-				if(user.getUserRewards().stream().filter(r -> r.attraction.attractionName.equals(attraction.attractionName)).count() == 0) {
-					if(nearAttraction(visitedLocation, attraction)) {
-						user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
-					}
+		List<VisitedLocation> userLocations = new ArrayList<>(user.getVisitedLocations());
+		List<Attraction> attractions = new ArrayList<>(gpsUtil.getAttractions());
+		Set<String> rewardedAttractions = new HashSet<>();
+
+		for (VisitedLocation visitedLocation : userLocations) {
+			for (Attraction attraction : attractions) {
+
+				boolean isNotYetAwarded = !rewardedAttractions.contains(attraction.attractionName);
+
+				if (isNotYetAwarded && nearAttraction(visitedLocation, attraction))
+				{
+					int nbOfPoints = getRewardPoints(attraction, user.getUserId());
+					user.addUserReward(new UserReward(visitedLocation, attraction, nbOfPoints));
+					rewardedAttractions.add(attraction.attractionName);
 				}
 			}
 		}
@@ -58,9 +64,9 @@ public class RewardsService {
 	private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
 		return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
 	}
-	
-	private int getRewardPoints(Attraction attraction, User user) {
-		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
+
+	public int getRewardPoints(Attraction attraction, UUID userId) {
+		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, userId);
 	}
 	
 	public double getDistance(Location loc1, Location loc2) {
