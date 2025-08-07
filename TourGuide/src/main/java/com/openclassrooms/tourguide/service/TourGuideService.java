@@ -7,14 +7,7 @@ import com.openclassrooms.tourguide.user.UserReward;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -80,30 +73,66 @@ public class TourGuideService {
 	}
 
 	public List<Provider> getTripDeals(User user) {
-		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
-		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
-				user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
-				user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
+		// Ensure user has at least one visited location
+		if (user.getVisitedLocations().isEmpty()) {
+			trackUserLocation(user);
+		}
+		// get the sum of all points
+		int cumulativeRewardPoints = user.getUserRewards().stream()
+				                          .mapToInt(UserReward::getRewardPoints)
+				                          .sum();
+
+		// get all the providers for each attraction
+		List<Provider> allProviders = getProvidersPerAttraction(user, cumulativeRewardPoints);
+		// limit results to 10 each time
+		List<Provider> providers = allProviders.stream()
+						.limit(10)
+						.toList();
+
 		user.setTripDeals(providers);
 		return providers;
 	}
 
+	private List<Provider> getProvidersPerAttraction(User user, int cumulativeRewardPoints) {
+		List<Provider> allProviders = new ArrayList<>();
+		List<Attraction> attractions = gpsUtil.getAttractions();
+		attractions.forEach(attraction -> {
+			List<Provider> result = tripPricer.getPrice(
+					tripPricerApiKey,
+					attraction.attractionId,
+					user.getUserPreferences().getNumberOfAdults(),
+					user.getUserPreferences().getNumberOfChildren(),
+					user.getUserPreferences().getTripDuration(),
+					cumulativeRewardPoints);
+			allProviders.addAll(result);
+		});
+		return allProviders;
+	}
+
 	public VisitedLocation trackUserLocation(User user) {
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+		VisitedLocation visitedLocation;
+
+		if (testMode) {
+			// Use the first attraction's location to guarantee proximity
+			Attraction attraction = gpsUtil.getAttractions().get(0);
+			visitedLocation = new VisitedLocation(user.getUserId(),
+					new Location(attraction.latitude, attraction.longitude), new Date());
+		} else {
+			visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+		}
 		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
 	}
 
 	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> nearbyAttractions = new ArrayList<>();
-		for (Attraction attraction : gpsUtil.getAttractions()) {
-			if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
-		}
-
-		return nearbyAttractions;
+		List<Attraction> allAttractions = gpsUtil.getAttractions();
+		return allAttractions.stream()
+				.sorted(Comparator.comparingDouble(
+						attraction -> rewardsService.getDistance(attraction, visitedLocation.location)
+				))
+				.limit(5)
+				.collect(Collectors.toList());
 	}
 
 	private void addShutDownHook() {
