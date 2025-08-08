@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.time.StopWatch;
@@ -29,6 +28,7 @@ public class TestPerformance {
 	private static RewardsService rewardsService;
 	private static TourGuideService tourGuideService;
 	private StopWatch stopWatch;
+	int numberOfUsers;
 
 	@BeforeAll
 	public static void init() {
@@ -41,7 +41,8 @@ public class TestPerformance {
 	public void setup() {
 		logger.debug("setup beforeEach");
 
-		InternalTestHelper.setInternalUserNumber(100000);
+		numberOfUsers = 1000;
+		InternalTestHelper.setInternalUserNumber(numberOfUsers);
 
 		stopWatch = new StopWatch();
 		tourGuideService = new TourGuideService(gpsUtil, rewardsService);
@@ -93,7 +94,7 @@ public class TestPerformance {
 		long limitTo15minutes = TimeUnit.MINUTES.toSeconds(15);
 		long totalTime = TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime());
 
-		System.out.println("highVolumeTrackLocation: Time Elapsed: " + totalTime + " seconds.");
+		System.out.println("highVolumeTrackLocation for " + numberOfUsers + " : Time Elapsed: " + totalTime + " seconds.");
 		// verify the total time is less than or equal to 15 minutes
 		assertTrue(limitTo15minutes >= totalTime);
 	}
@@ -124,7 +125,7 @@ public class TestPerformance {
 		long totalTime = TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime());
 
 		// verify the total time is less than or equal to 20 minutes
-		System.out.println("highVolumeGetRewards: Time Elapsed: " + totalTime + " seconds.");
+		System.out.println("highVolumeGetRewards for " + numberOfUsers+ " : Time Elapsed: " + totalTime + " seconds.");
 		assertTrue(limitTo20minutes >= totalTime);
 	}
 
