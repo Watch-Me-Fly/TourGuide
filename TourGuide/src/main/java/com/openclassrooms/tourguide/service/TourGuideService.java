@@ -1,10 +1,9 @@
 package com.openclassrooms.tourguide.service;
 
-import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.model.NearbyAttractionDTO;
-import com.openclassrooms.tourguide.tracker.Tracker;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
+import com.openclassrooms.tourguide.util.InternalTestHelper;
+import com.openclassrooms.tourguide.domain.dto.NearbyAttractionDTO;
+import com.openclassrooms.tourguide.tracking.Tracker;
+import com.openclassrooms.tourguide.domain.model.User;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -52,7 +51,7 @@ public class TourGuideService {
 		addShutDownHook();
 	}
 
-	public List<UserReward> getUserRewards(User user) {
+	public List<User.UserReward> getUserRewards(User user) {
 		return user.getUserRewards();
 	}
 
@@ -84,7 +83,7 @@ public class TourGuideService {
 		}
 		// get the sum of all points
 		int cumulativeRewardPoints = user.getUserRewards().stream()
-				                          .mapToInt(UserReward::getRewardPoints)
+				                          .mapToInt(User.UserReward::getRewardPoints)
 				                          .sum();
 
 		// get all the providers for each attraction
