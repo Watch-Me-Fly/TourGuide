@@ -1,10 +1,9 @@
 package com.openclassrooms.tourguide.service;
 
-import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.model.NearbyAttractionDTO;
-import com.openclassrooms.tourguide.tracker.Tracker;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
+import com.openclassrooms.tourguide.util.InternalTestHelper;
+import com.openclassrooms.tourguide.domain.dto.NearbyAttractionDTO;
+import com.openclassrooms.tourguide.tracking.Tracker;
+import com.openclassrooms.tourguide.domain.model.User;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -52,16 +51,15 @@ public class TourGuideService {
 		addShutDownHook();
 	}
 
-	public List<UserReward> getUserRewards(User user) {
+	public List<User.UserReward> getUserRewards(User user) {
 		return user.getUserRewards();
 	}
 
 	public VisitedLocation getUserLocation(User user) {
-		VisitedLocation visitedLocation =
-				(user.getVisitedLocations().size() > 0) ?
-						user.getLastVisitedLocation()
-						: trackUserLocation(user);
-		return visitedLocation;
+		if (user.getVisitedLocations().isEmpty()) {
+			return trackUserLocation(user);
+		}
+		return user.getLastVisitedLocation();
 	}
 
 	public User getUser(String userName) {
@@ -85,7 +83,7 @@ public class TourGuideService {
 		}
 		// get the sum of all points
 		int cumulativeRewardPoints = user.getUserRewards().stream()
-				                          .mapToInt(UserReward::getRewardPoints)
+				                          .mapToInt(User.UserReward::getRewardPoints)
 				                          .sum();
 
 		// get all the providers for each attraction
@@ -124,10 +122,13 @@ public class TourGuideService {
 	}
 
 	public VisitedLocation trackUserLocation(User user) {
+		VisitedLocation visitedLocation;
 		if (user.getVisitedLocations().isEmpty()) {
-			trackUserLocation(user);
+			visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			user.addToVisitedLocations(visitedLocation);
+		} else {
+			visitedLocation = user.getLastVisitedLocation();
 		}
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
