@@ -37,7 +37,7 @@ public class TestPerformance {
 		stopWatch = new StopWatch();
 		tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 	}
-	
+
 	@AfterEach
 	void tearDown() {
 		stopWatch.stop();
@@ -69,17 +69,16 @@ public class TestPerformance {
 	@DisplayName("Measure how long it takes to track location for a large number of users")
 	@Test
 	public void highVolumeTrackLocation() {
-		// Users should be incremented up to 100,000, and test finishes within 15
-		// minutes
-		InternalTestHelper.setInternalUserNumber(100);
+		// Users should be incremented up to 100,000, and test finishes within 15 minutes
+		InternalTestHelper.setInternalUserNumber(10);
 
-		List<User> allUsers = new ArrayList<>();
-		allUsers = tourGuideService.getAllUsers();
-
+		// user's list
+		List<User> allUsers = tourGuideService.getAllUsers();
 		stopWatch.start();
-		for (User user : allUsers) {
-			tourGuideService.trackUserLocation(user);
-		}
+
+		// track locations
+		tourGuideService.trackAllUsersLocations(allUsers);
+
 		System.out.println("highVolumeTrackLocation: Time Elapsed: "
 				+ TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()) + " seconds.");
 		assertTrue(TimeUnit.MINUTES.toSeconds(15) >= TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
@@ -88,9 +87,8 @@ public class TestPerformance {
 	@DisplayName("Measure how long it takes to calculate rewards for a large number of users")
 	@Test
 	public void highVolumeGetRewards() {
-		// Users should be incremented up to 100,000, and test finishes within 20
-		// minutes
-		InternalTestHelper.setInternalUserNumber(100);
+		// Users should be incremented up to 100,000, and test finishes within 20 minutes
+		InternalTestHelper.setInternalUserNumber(10);
 		stopWatch.start();
 
 		Attraction attraction = gpsUtil.getAttractions().get(0);

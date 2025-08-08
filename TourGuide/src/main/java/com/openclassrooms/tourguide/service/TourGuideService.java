@@ -8,6 +8,7 @@ import com.openclassrooms.tourguide.user.UserReward;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -109,17 +110,16 @@ public class TourGuideService {
 		return allProviders;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
-		VisitedLocation visitedLocation;
+	public void trackAllUsersLocations(List<User> users) {
+		List<CompletableFuture<Void>> futures = users.stream()
+				.map(user -> CompletableFuture.runAsync(() ->
+						trackUserLocation(user)))
+				.toList();
+		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+	}
 
-		if (testMode) {
-			// Use the first attraction's location to guarantee proximity
-			Attraction attraction = gpsUtil.getAttractions().get(0);
-			visitedLocation = new VisitedLocation(user.getUserId(),
-					new Location(attraction.latitude, attraction.longitude), new Date());
-		} else {
-			visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		}
+	public VisitedLocation trackUserLocation(User user) {
+		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
