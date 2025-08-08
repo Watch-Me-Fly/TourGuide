@@ -7,8 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
@@ -21,12 +20,17 @@ import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
 
 public class TestRewardsService {
+	private static GpsUtil gpsUtil;
+	private static RewardsService rewardsService;
+
+	@BeforeAll
+	public static void init() {
+		gpsUtil = new GpsUtil();
+		rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+	}
 
 	@Test
 	public void userGetRewards() {
-		GpsUtil gpsUtil = new GpsUtil();
-		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
-
 		InternalTestHelper.setInternalUserNumber(0);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
@@ -35,23 +39,22 @@ public class TestRewardsService {
 		user.addToVisitedLocations(new VisitedLocation(user.getUserId(), attraction, new Date()));
 		tourGuideService.trackUserLocation(user);
 		List<UserReward> userRewards = user.getUserRewards();
+
 		tourGuideService.tracker.stopTracking();
+
 		assertTrue(userRewards.size() == 1);
 	}
 
 	@Test
 	public void isWithinAttractionProximity() {
-		GpsUtil gpsUtil = new GpsUtil();
-		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		Attraction attraction = gpsUtil.getAttractions().get(0);
+
 		assertTrue(rewardsService.isWithinAttractionProximity(attraction, attraction));
 	}
 
 	@DisplayName("Reward user for all nearby attractions")
 	@Test
 	public void nearAllAttractions() {
-		GpsUtil gpsUtil = new GpsUtil();
-		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		rewardsService.setProximityBuffer(Integer.MAX_VALUE);
 
 		InternalTestHelper.setInternalUserNumber(1);
