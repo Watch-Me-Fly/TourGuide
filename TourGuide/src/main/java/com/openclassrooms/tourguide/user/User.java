@@ -1,9 +1,6 @@
 package com.openclassrooms.tourguide.user;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import gpsUtil.location.VisitedLocation;
 import tripPricer.Provider;
@@ -14,8 +11,8 @@ public class User {
 	private String phoneNumber;
 	private String emailAddress;
 	private Date latestLocationTimestamp;
-	private List<VisitedLocation> visitedLocations = new ArrayList<>();
-	private List<UserReward> userRewards = new ArrayList<>();
+	private final List<VisitedLocation> visitedLocations = Collections.synchronizedList(new ArrayList<>());
+	private final List<UserReward> userRewards = Collections.synchronizedList(new ArrayList<>());
 	private UserPreferences userPreferences = new UserPreferences();
 	private List<Provider> tripDeals = new ArrayList<>();
 	public User(UUID userId, String userName, String phoneNumber, String emailAddress) {
@@ -69,8 +66,14 @@ public class User {
 		visitedLocations.clear();
 	}
 	public void addUserReward(UserReward userReward) {
-		if (userRewards.stream().noneMatch(r -> r.attraction.attractionName.equals(userReward.attraction.attractionName))) {
-			userRewards.add(userReward);
+		synchronized (userRewards) {
+			boolean alreadyAdded = userRewards.stream()
+					.noneMatch(r -> r.attraction.attractionName.equals(
+							userReward.attraction.attractionName
+					));
+			if (alreadyAdded) {
+				userRewards.add(userReward);
+			}
 		}
 	}
 	

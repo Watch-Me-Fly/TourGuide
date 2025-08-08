@@ -57,11 +57,10 @@ public class TourGuideService {
 	}
 
 	public VisitedLocation getUserLocation(User user) {
-		VisitedLocation visitedLocation =
-				(user.getVisitedLocations().size() > 0) ?
-						user.getLastVisitedLocation()
-						: trackUserLocation(user);
-		return visitedLocation;
+		if (user.getVisitedLocations().isEmpty()) {
+			return trackUserLocation(user);
+		}
+		return user.getLastVisitedLocation();
 	}
 
 	public User getUser(String userName) {
@@ -124,10 +123,13 @@ public class TourGuideService {
 	}
 
 	public VisitedLocation trackUserLocation(User user) {
+		VisitedLocation visitedLocation;
 		if (user.getVisitedLocations().isEmpty()) {
-			trackUserLocation(user);
+			visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			user.addToVisitedLocations(visitedLocation);
+		} else {
+			visitedLocation = user.getLastVisitedLocation();
 		}
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
