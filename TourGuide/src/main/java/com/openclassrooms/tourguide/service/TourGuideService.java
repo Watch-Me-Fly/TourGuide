@@ -1,6 +1,7 @@
 package com.openclassrooms.tourguide.service;
 
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
+import com.openclassrooms.tourguide.model.NearbyAttractionDTO;
 import com.openclassrooms.tourguide.tracker.Tracker;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
@@ -8,7 +9,6 @@ import com.openclassrooms.tourguide.user.UserReward;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -54,8 +54,10 @@ public class TourGuideService {
 	}
 
 	public VisitedLocation getUserLocation(User user) {
-		VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-				: trackUserLocation(user);
+		VisitedLocation visitedLocation =
+				(user.getVisitedLocations().size() > 0) ?
+						user.getLastVisitedLocation()
+						: trackUserLocation(user);
 		return visitedLocation;
 	}
 
@@ -94,7 +96,7 @@ public class TourGuideService {
 		return providers;
 	}
 
-	private List<Provider> getProvidersPerAttraction(User user, int cumulativeRewardPoints) {
+	private List<Provider> getProvidersPerAttraction(User user, int cumulativeRewardPoints)  {
 		List<Provider> allProviders = new ArrayList<>();
 		List<Attraction> attractions = gpsUtil.getAttractions();
 		attractions.forEach(attraction -> {
@@ -110,14 +112,6 @@ public class TourGuideService {
 		return allProviders;
 	}
 
-	public void trackAllUsersLocations(List<User> users) {
-		List<CompletableFuture<Void>> futures = users.stream()
-				.map(user -> CompletableFuture.runAsync(() ->
-						trackUserLocation(user)))
-				.toList();
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-	}
-
 	public VisitedLocation trackUserLocation(User user) {
 		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
@@ -125,14 +119,61 @@ public class TourGuideService {
 		return visitedLocation;
 	}
 
-	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> allAttractions = gpsUtil.getAttractions();
-		return allAttractions.stream()
-				.sorted(Comparator.comparingDouble(
-						attraction -> rewardsService.getDistance(attraction, visitedLocation.location)
-				))
+	public List<NearbyAttractionDTO> getNearByAttractions(VisitedLocation visitedLocation) {
+
+		// prepare a list to return
+		List<NearbyAttractionDTO> nearbyAttractions = new ArrayList<>();
+		UUID userId = visitedLocation.userId;
+		Location userLocation = visitedLocation.location;
+
+		// needs : a user's id, and a visited location
+		if (userId == null || userLocation == null) {
+			System.err.println("Visited location is incomplete");
+			return nearbyAttractions;
+		}
+
+		// get the attractions
+		List<Attraction> attractionList;
+		try {
+			attractionList = gpsUtil.getAttractions();
+			if (attractionList == null || attractionList.isEmpty()) {
+				System.err.println("No attractions found");
+				return nearbyAttractions;
+			}
+		} catch (Exception e) {
+			System.err.println("Error while getting nearby attractions : " + e.getMessage());
+			return nearbyAttractions;
+		}
+
+		// find the attractions
+		for (Attraction attraction : attractionList) {
+			try {
+				double distance = rewardsService.getDistance(attraction, userLocation);
+				int rewardPoints = rewardsService.getRewardPoints(attraction, userId);
+
+				NearbyAttractionDTO dto = new NearbyAttractionDTO(
+						attraction.attractionName,
+						attraction.latitude,
+						attraction.longitude,
+						userLocation.latitude,
+						userLocation.longitude,
+						distance,
+						rewardPoints
+				);
+				nearbyAttractions.add(dto);
+
+			} catch (Exception e) {
+				System.err.println("Error retrieving attraction : " + e.getMessage());
+				return nearbyAttractions;
+			}
+		}
+
+		// sort by distance then return closest 5
+		return nearbyAttractions.stream()
+				.sorted(Comparator.comparingDouble(dto ->
+						dto.attractionDistance))
 				.limit(5)
-				.collect(Collectors.toList());
+				.toList();
 	}
 
 	private void addShutDownHook() {
