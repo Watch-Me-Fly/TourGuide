@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.time.StopWatch;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
@@ -22,6 +21,28 @@ import com.openclassrooms.tourguide.user.User;
 
 public class TestPerformance {
 
+	private static GpsUtil gpsUtil;
+	private static RewardsService rewardsService;
+	private static TourGuideService tourGuideService;
+	private StopWatch stopWatch;
+
+	@BeforeAll
+	public static void init() {
+		gpsUtil = new GpsUtil();
+		rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+	}
+
+	@BeforeEach
+	public void setup() {
+		stopWatch = new StopWatch();
+		tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+	}
+	
+	@AfterEach
+	void tearDown() {
+		stopWatch.stop();
+		tourGuideService.tracker.stopTracking();
+	}
 	/*
 	 * A note on performance improvements:
 	 * 
@@ -45,42 +66,32 @@ public class TestPerformance {
 	 * TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
 	 */
 
+	@DisplayName("Measure how long it takes to track location for a large number of users")
 	@Test
 	public void highVolumeTrackLocation() {
-		GpsUtil gpsUtil = new GpsUtil();
-		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		// Users should be incremented up to 100,000, and test finishes within 15
 		// minutes
 		InternalTestHelper.setInternalUserNumber(100);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
 		List<User> allUsers = new ArrayList<>();
 		allUsers = tourGuideService.getAllUsers();
 
-		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		for (User user : allUsers) {
 			tourGuideService.trackUserLocation(user);
 		}
-		stopWatch.stop();
-		tourGuideService.tracker.stopTracking();
-
 		System.out.println("highVolumeTrackLocation: Time Elapsed: "
 				+ TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()) + " seconds.");
 		assertTrue(TimeUnit.MINUTES.toSeconds(15) >= TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
 	}
 
+	@DisplayName("Measure how long it takes to calculate rewards for a large number of users")
 	@Test
 	public void highVolumeGetRewards() {
-		GpsUtil gpsUtil = new GpsUtil();
-		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
-
 		// Users should be incremented up to 100,000, and test finishes within 20
 		// minutes
 		InternalTestHelper.setInternalUserNumber(100);
-		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
 		Attraction attraction = gpsUtil.getAttractions().get(0);
 		List<User> allUsers = new ArrayList<>();
@@ -92,8 +103,6 @@ public class TestPerformance {
 		for (User user : allUsers) {
 			assertTrue(user.getUserRewards().size() > 0);
 		}
-		stopWatch.stop();
-		tourGuideService.tracker.stopTracking();
 
 		System.out.println("highVolumeGetRewards: Time Elapsed: " + TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime())
 				+ " seconds.");
