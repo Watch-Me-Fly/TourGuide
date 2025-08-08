@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -28,6 +28,8 @@ import tripPricer.TripPricer;
 @Service
 public class TourGuideService {
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
+	private static final ForkJoinPool forkJoinPool = new ForkJoinPool(64);
+
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
 	private final TripPricer tripPricer = new TripPricer();
@@ -42,10 +44,10 @@ public class TourGuideService {
 
 		if (testMode) {
 			logger.info("TestMode enabled");
-			logger.debug("Initializing users");
-			initializeInternalUsers();
-			logger.debug("Finished initializing users");
 		}
+		logger.debug("Initializing users");
+		initializeInternalUsers();
+		logger.debug("Finished initializing users");
 		tracker = new Tracker(this);
 		addShutDownHook();
 	}
@@ -67,7 +69,7 @@ public class TourGuideService {
 	}
 
 	public List<User> getAllUsers() {
-		return internalUserMap.values().stream().collect(Collectors.toList());
+		return internalUserMap.values().stream().toList();
 	}
 
 	public void addUser(User user) {
@@ -116,12 +118,15 @@ public class TourGuideService {
 	public void trackAllUsersLocations(List<User> users) {
 		List<CompletableFuture<Void>> futures = users.stream()
 				.map(user -> CompletableFuture.runAsync(() ->
-						trackUserLocation(user)))
+						trackUserLocation(user), forkJoinPool))
 				.toList();
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 	}
 
 	public VisitedLocation trackUserLocation(User user) {
+		if (user.getVisitedLocations().isEmpty()) {
+			trackUserLocation(user);
+		}
 		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
@@ -129,7 +134,6 @@ public class TourGuideService {
 	}
 
 	public List<NearbyAttractionDTO> getNearByAttractions(VisitedLocation visitedLocation) {
-
 		// prepare a list to return
 		List<NearbyAttractionDTO> nearbyAttractions = new ArrayList<>();
 		UUID userId = visitedLocation.userId;
