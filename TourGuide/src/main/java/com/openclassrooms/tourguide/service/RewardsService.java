@@ -1,6 +1,7 @@
 package com.openclassrooms.tourguide.service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
@@ -55,6 +56,16 @@ public class RewardsService {
 				}
 			}
 		}
+	}
+	public void calculateRewardsForMultipleUsers(List<User> users) {
+		List<CompletableFuture<Void>> futures = users.stream()
+				.map(user -> CompletableFuture.runAsync(() -> {
+					calculateRewards(user);
+				}))
+				.toList();
+		CompletableFuture
+				.allOf(futures.toArray(new CompletableFuture[0]))
+				.join();
 	}
 	
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
