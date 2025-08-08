@@ -23,8 +23,8 @@ public class TestRewardsService {
 	private static GpsUtil gpsUtil;
 	private static RewardsService rewardsService;
 
-	@BeforeAll
-	public static void init() {
+	@BeforeEach
+	public void init() {
 		gpsUtil = new GpsUtil();
 		rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 	}
