@@ -10,8 +10,7 @@ import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
+import com.openclassrooms.tourguide.domain.model.User;
 
 @Service
 public class RewardsService {
@@ -61,7 +60,7 @@ public class RewardsService {
 							     rewardsCentral.getAttractionRewardPoints(
 										 attraction.attractionId, user.getUserId()
 								 ));
-					user.addUserReward(new UserReward(visitedLocation, attraction, points));
+					user.addUserReward(new User.UserReward(visitedLocation, attraction, points));
 					rewardedAttractions.add(attraction.attractionName);
 				}
 			}
